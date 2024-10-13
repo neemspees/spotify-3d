@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import { ref, shallowRef, defineProps, watchEffect, onMounted } from 'vue';
-import { useTexture, useLoop } from '@tresjs/core';
+import { ref, shallowRef, defineProps, watchEffect, onMounted, reactive, computed } from 'vue';
+import { useTexture, useLoop, onAfterRender } from '@tresjs/core';
+import { Reflector, OrbitControls } from '@tresjs/cientos';
+import { Pane } from 'tweakpane';
 import * as THREE from 'three';
-
-// TODO - I was setting up reflections but its not working yet
-// The cube camera should be rendered on the render target
-// which in turn should be used as a texture for the reflection material.
-// https://github.com/mrdoob/three.js/blob/master/examples/webgl_materials_cubemap_dynamic.html
-const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(128);
-cubeRenderTarget.texture.type = THREE.HalffloatType;
-const cubeCamera = new THREE.CubeCamera(1, 1000, cubeRenderTarget);
 
 const props = defineProps({
     title: String,
@@ -17,23 +11,40 @@ const props = defineProps({
     artistImage: String,
     album: String,
     image: String,
+    backgroundColor: String,
 });
 
 const { onBeforeRender } = useLoop();
 
-const texture = ref(null);
-const artistTexture = ref(null);
 const boxRef = shallowRef(null);
+const backWallRef = shallowRef(null);
 const reflectionTexture = ref(null);
+const boxState = reactive({
+    size: 5,
+    position: {
+        x: -4,
+        y: 0,
+        z: -4,
+    },
+});
+
+const pane = new Pane();
+pane.addBinding(boxState, 'size', { label: 'Size' });
+pane.addBinding(boxState.position, 'x', { label: 'X' });
+pane.addBinding(boxState.position, 'y', { label: 'Y' });
+pane.addBinding(boxState.position, 'z', { label: 'Z' });
 
 async function loadTextures() {
     const response = await useTexture({ map: props.image });
 
-    texture.value = response.map;
+    boxRef.value.material.map = response.map;
+    boxRef.value.material.emissiveMap = response.map;
+    boxRef.value.material.needsUpdate = true;
 
     const artistResponse = await useTexture({ map: props.artistImage });
 
-    artistTexture.value = artistResponse.map;
+    backWallRef.value.material.map = artistResponse.map;
+    backWallRef.value.material.needsUpdate = true;
 }
 
 watchEffect(() => {
@@ -42,76 +53,85 @@ watchEffect(() => {
 
 onMounted(() => {
     loadTextures();
-    reflectionTexture.value = cubeRenderTarget.texture;
 });
 
 onBeforeRender(({ delta, elapsed, renderer, scene }) => {
     boxRef.value.rotation.y += delta * .3;
     boxRef.value.rotation.x = Math.sin(elapsed) * 0.2;
-    cubeCamera.update(renderer, scene);
+    boxRef.value.position.y = Math.cos(elapsed) * 2;
 });
 </script>
 
 <template>
     <TresPerspectiveCamera
-      :position="[1.3, 1, 5]"
-      :look-at="[0, 0, 0]"
+        :position="[14, 1, 14]"
+        :look-at="[0, 0, 0]"
+    />
+
+    <TresPerspectiveCamera
+        ref="leftWallReflectionCameraRef"
+        :look-at="[0, 0, 0]"
     />
 
     <TresMesh
         ref="boxRef"
+        :position="[boxState.position.x, boxState.position.y, boxState.position.z]"
     >
-        <TresBoxGeometry />
+        <TresBoxGeometry
+            :args="[boxState.size, boxState.size, boxState.size]"
+        />
         <TresMeshPhongMaterial
-            v-if="texture"
-            :map="texture"
             :metalness="0.5"
-            :emissiveMap="texture"
-            :emissiveIntensity="0.5"
+            :emissiveIntensity="0.2"
+            :toneMapped="false"
+            emissive="#fefefe"
             color="#fefefe"
         />
     </TresMesh>
-<!--
-    <TresMesh
-        :position="[0, 1, 0]"
-    >
-        <TresBoxGeometry />
-        <TresMeshStandardMaterial
-            :map="reflectionTexture"
-            :metalness="1"
-            :roughness="0.05"
-        />
-    </TresMesh>
--->
     
     <TresMesh
-        :position="[0, 0, -20]"
+        ref="backWallRef"
+        :position="[0, 0, -10]"
         :rotation="[0, 0, 0]"
-            v-if="artistTexture"
     >
         <TresPlaneGeometry
             :args="[20, 20]"
         />
         <TresMeshBasicMaterial
             color="#3a3a3a"
-            :map="artistTexture"
             :roughness="0.5"
         />
     </TresMesh>
-    
-    <TresMesh
-        :position="[-10, 0, -10]"
+
+    <Reflector
+        :position="[-10, 0, 0]"
         :rotation="[0, Math.PI / 2, 0]"
+        color="#f7f7f7"
     >
         <TresPlaneGeometry
             :args="[20, 20]"
         />
-        <TresMeshBasicMaterial color="#2a2a2a" />
+    </Reflector>
+
+    <TresMesh
+        :position="[0, -10, 0]"
+        :rotation="[-Math.PI / 2, 0, 0]"
+    >
+        <TresPlaneGeometry
+            :args="[20, 20]"
+        />
+        <TresMeshPhongMaterial
+            :shininess="200"
+            :roughness="0.2"
+            :metalness="0.5"
+            specular="#ffffff"
+            color="#ffffff"
+        />
     </TresMesh>
 
     <TresMesh
-        :position="[0, -5, -10]"
-        :rotation="[-Math.PI / 2, 0, 0]"
+        :position="[0, 10, 0]"
+        :rotation="[Math.PI / 2, 0, 0]"
     >
         <TresPlaneGeometry
             :args="[20, 20]"

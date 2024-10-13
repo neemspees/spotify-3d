@@ -1,4 +1,4 @@
-![Screenshot](./docs/assets/screenshot.png)
+![Screenshot](./docs/assets/screencap.gif)
 
 # TresJS Spotify Player
 

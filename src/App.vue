@@ -7,10 +7,6 @@ import { FastAverageColor } from 'fast-average-color';
 
 const { playingNow } = useSpotify();
 
-const changeUrl = () => {
-    songInfo.value.image = 'https://play-lh.googleusercontent.com/eN0IexSzxpUDMfFtm-OyM-nNs44Y74Q3k51bxAMhTvrTnuA4OGnTi_fodN4cl-XxDQc';
-};
-
 const backgroundColor = ref('#000000');
 const foregroundColor = ref('#ffffff');
 
@@ -40,11 +36,11 @@ watch(playingNow, () => {
                     :artist="playingNow?.artist"
                     :image="playingNow?.image"
                     :artistImage="playingNow?.artistImage"
+                    :backgroundColor="backgroundColor"
                 />
             </TresCanvas>
         </div>
         <div
-            @click="changeUrl"
             :style="{
                 backgroundColor: backgroundColor,
                 color: foregroundColor,

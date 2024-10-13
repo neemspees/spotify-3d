@@ -10,12 +10,15 @@
   },
   "dependencies": {
     "@spotify/web-api-ts-sdk": "^1.2.0",
+    "@tresjs/cientos": "^4.0.3",
     "@tresjs/core": "^4.3.0",
     "fast-average-color": "^9.4.0",
     "three": "^0.169.0",
+    "tweakpane": "^4.0.4",
     "vue": "^3.5.10"
   },
   "devDependencies": {
+    "@tweakpane/core": "^2.0.4",
     "@types/three": "^0.169.0",
     "@vitejs/plugin-vue": "^5.1.4",
     "typescript": "^5.5.3",
