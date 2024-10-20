@@ -103,7 +103,7 @@ export function useSpotify() {
                     artist: state.track_window.current_track.artists.map(a => a.name).join(', '),
                     title: state.track_window.current_track.name,
                     image: state.track_window.current_track.album.images[0].url,
-                    artistImage: state.track_window.current_track.album.images[1].url,
+                    artistImage: state.track_window.current_track.album.images[0].url,
                     paused: state.paused,
                     duration: state.duration,
                     position: state.position,

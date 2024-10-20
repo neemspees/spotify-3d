@@ -44,7 +44,7 @@ const remaining = computed(() => {
 
 const songTitle = computed(() => {
     if (! isReady.value) {
-        return 'Connecting to Spotify';
+        return 'Connecting to Spotify...';
     } 
 
     if (! playingNow.value) {
@@ -79,7 +79,7 @@ watch(playingNow, () => {
                     :title="songTitle"
                     :artist="playingNow?.artist"
                     :image="playingNow?.image ?? spotifyLogo"
-                    :artistImage="playingNow?.artistImage ?? spotifyLogo"
+                    :artistImage="playingNow?.artistImage"
                     :paused="playingNow?.paused ?? true"
                     :backgroundColor="backgroundColor"
                 />

@@ -57,13 +57,16 @@ onMounted(() => {
 });
 
 onBeforeRender(({ delta, elapsed, renderer, scene }) => {
+    boxState.size = Math.sin(elapsed * .7) * .5 + 6;
+
     if (props.paused) {
+        boxRef.value.rotation.y += delta * .1;
         return;
     }
 
-    boxRef.value.rotation.y += delta * .3;
-    boxRef.value.rotation.x = Math.sin(elapsed) * 0.2;
-    boxRef.value.position.y = Math.cos(elapsed) * 2;
+    boxRef.value.rotation.y += delta * .2;
+    boxRef.value.rotation.x += delta * 0.2;
+
 });
 </script>
 
@@ -86,10 +89,9 @@ onBeforeRender(({ delta, elapsed, renderer, scene }) => {
             :args="[boxState.size, boxState.size, boxState.size]"
         />
         <TresMeshPhongMaterial
-            :metalness="0.5"
             :emissiveIntensity="0.2"
             :toneMapped="false"
-            emissive="#fefefe"
+            emissive="#d2f1dd"
             color="#fefefe"
         />
     </TresMesh>
@@ -103,8 +105,16 @@ onBeforeRender(({ delta, elapsed, renderer, scene }) => {
             :args="[20, 20]"
         />
         <TresMeshBasicMaterial
+            v-if="artistImage"
             color="#3a3a3a"
             :roughness="0.5"
+        />
+        <TresMeshPhongMaterial
+            v-else
+            color="#797979"
+            :roughness="0.2"
+            :shininess="30"
+            specular="#179443"
         />
     </TresMesh>
 
