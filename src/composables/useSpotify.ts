@@ -75,6 +75,25 @@ export function useSpotify() {
         progressInterval = null;
     }
 
+    function updateState(newState: Spotify.PlaybackState): void {
+        playerState.value.paused = newState.paused;
+        playerState.value.duration = newState.duration;
+        playerState.value.position = newState.position;
+
+        playerState.value.track = {
+            id: newState.track_window.current_track.uid,
+            name: newState.track_window.current_track.name,
+            artists: newState.track_window.current_track.artists.map(a => a.name),
+            image: newState.track_window.current_track.album.images[0].url,
+        };
+
+        if (newState.paused) {
+            stopProgress();
+        } else {
+            startProgress();
+        }
+    }
+
     onMounted(() => {
         load().then(() => {
             player = new window.Spotify.Player({
@@ -95,6 +114,7 @@ export function useSpotify() {
             player.addListener('ready', ({ device_id }) => {
                 console.log('Ready with Device ID', device_id);
                 playerState.value.ready = true;
+
             });
 
             player.addListener('not_ready', ({ device_id }) => {
@@ -105,22 +125,7 @@ export function useSpotify() {
             player.addListener('player_state_changed', newState => {
                 console.log('Player state changed', newState);
 
-                playerState.value.paused = newState.paused;
-                playerState.value.duration = newState.duration;
-                playerState.value.position = newState.position;
-
-                playerState.value.track = {
-                    id: newState.track_window.current_track.uid,
-                    name: newState.track_window.current_track.name,
-                    artists: newState.track_window.current_track.artists.map(a => a.name),
-                    image: newState.track_window.current_track.album.images[0].url,
-                };
-
-                if (newState.paused) {
-                    stopProgress();
-                } else {
-                    startProgress();
-                }
+                updateState(newState);
             });
 
             player.connect();
@@ -134,6 +139,7 @@ export function useSpotify() {
     const logOut = () => {
         sdk.logOut();
         console.log('Logged out');
+        window.location.reload();
     }
 
     return {
