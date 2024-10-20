@@ -1,10 +1,8 @@
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
 import { SpotifyApi, Track, Episode } from '@spotify/web-api-ts-sdk';
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const APP_PORT = 5173;
-
-const useTestData = true;
 
 export function useSpotify() {
     const playingNow = ref<null|{
@@ -13,78 +11,128 @@ export function useSpotify() {
         title: string,
         image: string,
         artistImage: string,
+        paused: boolean,
+        duration: number,
+        position: number,
     }>(null);
+    
+    let player: Spotify.Player|null = null;
+    let progressInterval: ReturnType<typeof setInterval>|null = null;
 
-    const sdk = SpotifyApi.withUserAuthorization(CLIENT_ID, `http://localhost:${APP_PORT}`, ['user-read-playback-state']);
+    const sdk = SpotifyApi.withUserAuthorization(CLIENT_ID, `http://localhost:${APP_PORT}`, ['streaming', 'user-read-email', 'user-read-private', 'user-read-playback-state']);
 
-    let intervalId: ReturnType<typeof setInterval>|null = null;
-
-    onMounted(() => {
-        if (useTestData) {
-            playingNow.value = {
-                itemId: '1',
-                artist: 'Eminem',
-                title: 'Business',
-                image: 'https://i.scdn.co/image/ab67616d0000b273a8877f56d674a1bbdf618e5c',
-                artistImage: 'https://ca.billboard.com/media-library/eminem.jpg?id=52518021&width=980',
+    function load(): Promise<void> {
+        return new Promise(res => {
+            window.onSpotifyWebPlaybackSDKReady = () => {
+                res();
             };
 
+            const script = document.createElement("script");
+            script.src = "https://sdk.scdn.co/spotify-player.js";
+            script.async = true;
+        });
+    };
+
+    function unload(): void {
+        window.onSpotifyWebPlaybackSDKReady = () => {};
+        document.querySelector('script[src="https://sdk.scdn.co/spotify-player.js"]')?.remove();
+    };
+
+    function startProgress(): void {
+        if (progressInterval) {
             return;
         }
 
-        intervalId = setInterval(() => {
-            sdk.player.getPlaybackState().then(response => {
-                if (! response?.item) {
-                    playingNow.value = null;
+        progressInterval = setInterval(() => {
+            if (!playingNow.value) {
+                return;
+            }
 
-                    return;
-                }
+            if (playingNow.value.paused) {
+                return;
+            }
 
-                if (response.item.id === playingNow.value?.itemId) {
-                    return;
-                }
+            playingNow.value.position += 500;
+        }, 500);
+    }
 
-                if (response.item.type === 'track') {
-                    const item = response.item as Track;
-                    
-                    sdk.artists.get(item.artists[0].id).then(artist => {
-                        playingNow.value = {
-                            itemId: item.id,
-                            artistImage: artist.images[0].url,
-                            artist: item.artists.map(artist => artist.name).join(', '),
-                            title: item.name,
-                            image: item.album.images[0].url,
-                        };
+    function stopProgress(): void {
+        if (!progressInterval) {
+            return;
+        }
+
+        clearInterval(progressInterval);
+        progressInterval = null;
+    }
+
+    onMounted(() => {
+        load().then(() => {
+            player = new window.Spotify.Player({
+                name: 'Spotify 3D',
+                getOAuthToken: (cb) => {
+                    sdk.authenticate().then(() => {
+                        sdk.getAccessToken().then(token => {
+                            if (!token) {
+                                throw new Error('No token');
+                            }
+
+                            cb(token.access_token);
+                        });
                     });
+                },
+            });
 
-                    return;
-                }
+            player.addListener('ready', ({ device_id }) => {
+                console.log('Ready with Device ID', device_id);
+            });
 
-                const item = response.item as Episode;
+            player.addListener('not_ready', ({ device_id }) => {
+                console.log('Device ID has gone offline', device_id);
+            });
 
+            player.addListener('player_state_changed', state => {
+                console.log('Player state changed', state);
+
+            
                 playingNow.value = {
-                    itemId: item.id,
-                    artistImage: item.show.images[0].url,
-                    artist: item.show.publisher,
-                    title: item.name,
-                    image: item.images[0].url,
+                    itemId: state.playback_id,
+                    artist: state.track_window.current_track.artists.map(a => a.name).join(', '),
+                    title: state.track_window.current_track.name,
+                    image: state.track_window.current_track.album.images[0].url,
+                    artistImage: state.track_window.current_track.album.images[1].url,
+                    paused: state.paused,
+                    duration: state.duration,
+                    position: state.position,
                 };
 
-                return;
+                if (state.paused) {
+                    stopProgress();
+                } else {
+                    startProgress();
+                }
             });
-        }, 5000);
+
+            player.connect();
+        });
     });
 
-    onBeforeUnmount(() => {
-        if (! intervalId) {
-            return;
-        }
-
-        clearInterval(intervalId);
+    onUnmounted(() => {
+        unload();
     });
+
+    const logOut = () => {
+        sdk.logOut();
+        console.log('Logged out');
+    }
 
     return {
         playingNow,
+        logOut,
+        controls: {
+            togglePlay: () => player?.togglePlay(),
+            next: () => player?.nextTrack(),
+            previous: () => player?.previousTrack(),
+        },
     };
 }
 

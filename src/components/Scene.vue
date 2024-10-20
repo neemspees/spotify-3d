@@ -11,6 +11,7 @@ const props = defineProps({
     artistImage: String,
     album: String,
     image: String,
+    paused: Boolean,
     backgroundColor: String,
 });
 
@@ -56,6 +57,10 @@ onMounted(() => {
 });
 
 onBeforeRender(({ delta, elapsed, renderer, scene }) => {
+    if (props.paused) {
+        return;
+    }
+
     boxRef.value.rotation.y += delta * .3;
     boxRef.value.rotation.x = Math.sin(elapsed) * 0.2;
     boxRef.value.position.y = Math.cos(elapsed) * 2;
