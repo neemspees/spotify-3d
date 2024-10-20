@@ -6,7 +6,7 @@ import { useSpotify } from './composables/useSpotify';
 import { FastAverageColor } from 'fast-average-color';
 import spotifyLogo from './assets/spotify.png';
 
-const { playingNow, logOut, controls } = useSpotify();
+const { isReady, playingNow, logOut, controls } = useSpotify();
 
 const backgroundColor = ref('#000000');
 const foregroundColor = ref('#ffffff');
@@ -42,6 +42,18 @@ const remaining = computed(() => {
     return formatTime(playingNow.value.duration - playingNow.value.position);
 });
 
+const songTitle = computed(() => {
+    if (! isReady.value) {
+        return 'Connecting to Spotify';
+    } 
+
+    if (! playingNow.value) {
+        return 'No Song Playing';
+    }
+
+    return playingNow.value.title;
+});
+
 watch(playingNow, () => {
     if (! playingNow.value?.image) {
         backgroundColor.value = '#000000';
@@ -64,7 +76,7 @@ watch(playingNow, () => {
                 clear-color="#000000"
             >
                 <Scene 
-                    :title="playingNow?.title"
+                    :title="songTitle"
                     :artist="playingNow?.artist"
                     :image="playingNow?.image ?? spotifyLogo"
                     :artistImage="playingNow?.artistImage ?? spotifyLogo"
@@ -85,7 +97,7 @@ watch(playingNow, () => {
 
             <img :src="playingNow?.image ?? spotifyLogo" alt="Album Cover" />
             <h2>{{ playingNow?.artist ?? 'Spotify 3D' }}</h2>
-            <h1>{{ playingNow?.title ?? 'Waiting for Connection' }}</h1>
+            <h1>{{ songTitle }}</h1>
 
             <div class="progress">
                 <div :style="{ width: `${progress}%` }"></div>
@@ -102,7 +114,7 @@ watch(playingNow, () => {
                 <button
                     :disbaled="! playingNow"
                     @click="controls.togglePlay"
-                >{{ playingNow?.paused ? '&#9658;' : '⏸︎' }}</button>
+                >{{ playingNow?.paused === false ? '⏸︎' : '&#9658;' }}</button>
                 <button
                     @click="controls.next"
                 >⏭︎</button>

@@ -5,6 +5,8 @@ const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const APP_PORT = 5173;
 
 export function useSpotify() {
+    const isReady = ref(false);
+
     const playingNow = ref<null|{
         itemId: string,
         artist: string,
@@ -84,10 +86,12 @@ export function useSpotify() {
 
             player.addListener('ready', ({ device_id }) => {
                 console.log('Ready with Device ID', device_id);
+                isReady.value = true;
             });
 
             player.addListener('not_ready', ({ device_id }) => {
                 console.log('Device ID has gone offline', device_id);
+                isReady.value = false;
             });
 
             player.addListener('player_state_changed', state => {
@@ -126,6 +130,7 @@ export function useSpotify() {
     }
 
     return {
+        isReady,
         playingNow,
         logOut,
         controls: {
