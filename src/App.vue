@@ -6,7 +6,7 @@ import { useSpotify } from './composables/useSpotify';
 import { FastAverageColor } from 'fast-average-color';
 import spotifyLogo from './assets/spotify.png';
 
-const { isReady, playingNow, logOut, controls } = useSpotify();
+const { playerState, playerControls, logOut } = useSpotify();
 
 const backgroundColor = ref('#000000');
 const foregroundColor = ref('#ffffff');
@@ -19,49 +19,37 @@ function formatTime(ms: number) {
 }
 
 const progress = computed(() => {
-    if (! playingNow.value) {
-        return 0;
-    }
-
-    return playingNow.value.position / playingNow.value.duration * 100;
+    return playerState.value.position / playerState.value.duration * 100;
 });
 
 const elapsed = computed(() => {
-    if (! playingNow.value) {
-        return '00:00';
-    }
-
-    return formatTime(playingNow.value.position);
+    return formatTime(playerState.value.position);
 });
 
 const remaining = computed(() => {
-    if (! playingNow.value) {
-        return '00:00';
-    }
-
-    return formatTime(playingNow.value.duration - playingNow.value.position);
+    return formatTime(playerState.value.duration - playerState.value.position);
 });
 
 const songTitle = computed(() => {
-    if (! isReady.value) {
+    if (! playerState.value.ready) {
         return 'Connecting to Spotify...';
     } 
 
-    if (! playingNow.value) {
+    if (! playerState.value.track) {
         return 'No Song Playing';
     }
 
-    return playingNow.value.title;
+    return playerState.value.track.name;
 });
 
-watch(playingNow, () => {
-    if (! playingNow.value?.image) {
+watch(playerState, () => {
+    if (! playerState.value.track?.image) {
         backgroundColor.value = '#000000';
         return;
     }
 
     const fac = new FastAverageColor();
-    fac.getColorAsync(playingNow.value.image)
+    fac.getColorAsync(playerState.value.track.image)
         .then(color => {
             backgroundColor.value = color.hex;
             foregroundColor.value = color.isDark ? '#ffffff' : '#000000';
@@ -77,10 +65,10 @@ watch(playingNow, () => {
             >
                 <Scene 
                     :title="songTitle"
-                    :artist="playingNow?.artist"
-                    :image="playingNow?.image ?? spotifyLogo"
-                    :artistImage="playingNow?.artistImage"
-                    :paused="playingNow?.paused ?? true"
+                    :artist="playerState.track?.artist"
+                    :image="playerState.track?.image ?? spotifyLogo"
+                    :artistImage="playerState.track?.image ?? spotifyLogo"
+                    :paused="playerState.paused"
                     :backgroundColor="backgroundColor"
                 />
             </TresCanvas>
@@ -95,8 +83,8 @@ watch(playingNow, () => {
                 @click="logOut"
             >Logout</button>
 
-            <img :src="playingNow?.image ?? spotifyLogo" alt="Album Cover" />
-            <h2>{{ playingNow?.artist ?? 'Spotify 3D' }}</h2>
+            <img :src="playerState.track?.image ?? spotifyLogo" alt="Album Cover" />
+            <h2>{{ playerState.track?.artists?.join(',') ?? 'Spotify 3D' }}</h2>
             <h1>{{ songTitle }}</h1>
 
             <div class="progress">
@@ -109,14 +97,13 @@ watch(playingNow, () => {
 
             <div class="controls">
                 <button
-                    @click="controls.previous"
+                    @click="playerControls.previous"
                 >⏮︎</button>
                 <button
-                    :disbaled="! playingNow"
-                    @click="controls.togglePlay"
-                >{{ playingNow?.paused === false ? '⏸︎' : '&#9658;' }}</button>
+                    @click="playerControls.togglePlay"
+                >{{ playerState.paused ? '&#9658;' : '⏸︎' }}</button>
                 <button
-                    @click="controls.next"
+                    @click="playerControls.next"
                 >⏭︎</button>
             </div>
         </div>

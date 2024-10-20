@@ -4,19 +4,31 @@ import { SpotifyApi, Track, Episode } from '@spotify/web-api-ts-sdk';
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const APP_PORT = 5173;
 
-export function useSpotify() {
-    const isReady = ref(false);
+type Track = {
+    id: string,
+    name: string,
+    artists: string[],
+    image: string,
+};
 
-    const playingNow = ref<null|{
-        itemId: string,
-        artist: string,
-        title: string,
-        image: string,
-        artistImage: string,
-        paused: boolean,
-        duration: number,
-        position: number,
-    }>(null);
+type PlayerState = {
+    name: string,
+    ready: boolean,
+    paused: boolean,
+    duration: number,
+    position: number,
+    track: Track|null,
+};
+
+export function useSpotify() {
+    const playerState = ref<PlayerState>({
+        name: 'Spotify 3D',
+        ready: false,
+        paused: true,
+        duration: 0,
+        position: 0,
+        track: null,
+    });
     
     let player: Spotify.Player|null = null;
     let progressInterval: ReturnType<typeof setInterval>|null = null;
@@ -46,15 +58,11 @@ export function useSpotify() {
         }
 
         progressInterval = setInterval(() => {
-            if (!playingNow.value) {
+            if (playerState.value.paused) {
                 return;
             }
 
-            if (playingNow.value.paused) {
-                return;
-            }
-
-            playingNow.value.position += 500;
+            playerState.value.position += 500;
         }, 500);
     }
 
@@ -70,7 +78,7 @@ export function useSpotify() {
     onMounted(() => {
         load().then(() => {
             player = new window.Spotify.Player({
-                name: 'Spotify 3D',
+                name: playerState.value.name,
                 getOAuthToken: (cb) => {
                     sdk.authenticate().then(() => {
                         sdk.getAccessToken().then(token => {
@@ -86,30 +94,29 @@ export function useSpotify() {
 
             player.addListener('ready', ({ device_id }) => {
                 console.log('Ready with Device ID', device_id);
-                isReady.value = true;
+                playerState.value.ready = true;
             });
 
             player.addListener('not_ready', ({ device_id }) => {
                 console.log('Device ID has gone offline', device_id);
-                isReady.value = false;
+                playerState.value.ready = false;
             });
 
-            player.addListener('player_state_changed', state => {
-                console.log('Player state changed', state);
+            player.addListener('player_state_changed', newState => {
+                console.log('Player state changed', newState);
 
-            
-                playingNow.value = {
-                    itemId: state.playback_id,
-                    artist: state.track_window.current_track.artists.map(a => a.name).join(', '),
-                    title: state.track_window.current_track.name,
-                    image: state.track_window.current_track.album.images[0].url,
-                    artistImage: state.track_window.current_track.album.images[0].url,
-                    paused: state.paused,
-                    duration: state.duration,
-                    position: state.position,
+                playerState.value.paused = newState.paused;
+                playerState.value.duration = newState.duration;
+                playerState.value.position = newState.position;
+
+                playerState.value.track = {
+                    id: newState.track_window.current_track.uid,
+                    name: newState.track_window.current_track.name,
+                    artists: newState.track_window.current_track.artists.map(a => a.name),
+                    image: newState.track_window.current_track.album.images[0].url,
                 };
 
-                if (state.paused) {
+                if (newState.paused) {
                     stopProgress();
                 } else {
                     startProgress();
@@ -130,10 +137,9 @@ export function useSpotify() {
     }
 
     return {
-        isReady,
-        playingNow,
+        playerState,
         logOut,
-        controls: {
+        playerControls: {
             togglePlay: () => player?.togglePlay(),
             next: () => player?.nextTrack(),
             previous: () => player?.previousTrack(),
