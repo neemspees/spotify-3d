@@ -42,7 +42,7 @@ const songTitle = computed(() => {
     return playerState.value.track.name;
 });
 
-watch(playerState, () => {
+watch(() => playerState.value.track, () => {
     if (! playerState.value.track?.image) {
         backgroundColor.value = '#000000';
         return;
@@ -74,6 +74,7 @@ watch(playerState, () => {
             </TresCanvas>
         </div>
         <div
+            v-if="false"
             :style="{
                 backgroundColor: backgroundColor,
                 color: foregroundColor,

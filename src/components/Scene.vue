@@ -2,8 +2,8 @@
 import { ref, shallowRef, defineProps, watchEffect, onMounted, reactive, computed } from 'vue';
 import { useTexture, useLoop, onAfterRender } from '@tresjs/core';
 import { Reflector, OrbitControls } from '@tresjs/cientos';
+import TestShaderMaterial from './materials/TestShaderMaterial.vue';
 import { Pane } from 'tweakpane';
-import * as THREE from 'three';
 
 const props = defineProps({
     title: String,
@@ -24,9 +24,16 @@ const boxState = reactive({
     size: 5,
     position: {
         x: -4,
-        y: 0,
+        y: -4,
         z: -4,
     },
+});
+const testShaderState = reactive({
+    speed: 1,
+    scale: 1,
+    frequency: 1,
+    color: '#FF00FF',
+    texture: null,
 });
 
 const pane = new Pane();
@@ -35,12 +42,20 @@ pane.addBinding(boxState.position, 'x', { label: 'X' });
 pane.addBinding(boxState.position, 'y', { label: 'Y' });
 pane.addBinding(boxState.position, 'z', { label: 'Z' });
 
+const testShaderFolder = pane.addFolder({ title: 'Test Shader' });
+testShaderFolder.addBinding(testShaderState, 'speed', { label: 'Speed' });
+testShaderFolder.addBinding(testShaderState, 'scale', { label: 'Scale' });
+testShaderFolder.addBinding(testShaderState, 'frequency', { label: 'Frequency' });
+testShaderFolder.addBinding(testShaderState, 'color');
+
 async function loadTextures() {
     const response = await useTexture({ map: props.image });
 
     boxRef.value.material.map = response.map;
     boxRef.value.material.emissiveMap = response.map;
     boxRef.value.material.needsUpdate = true;
+
+    testShaderState.texture = response.map;
 
     const artistResponse = await useTexture({ map: props.artistImage });
 
@@ -66,11 +81,11 @@ onBeforeRender(({ delta, elapsed, renderer, scene }) => {
 
     boxRef.value.rotation.y += delta * .2;
     boxRef.value.rotation.x += delta * 0.2;
-
 });
 </script>
 
 <template>
+    <OrbitControls/>
     <TresPerspectiveCamera
         :position="[14, 1, 14]"
         :look-at="[0, 0, 0]"
@@ -91,10 +106,29 @@ onBeforeRender(({ delta, elapsed, renderer, scene }) => {
         <TresMeshPhongMaterial
             :emissiveIntensity="0.2"
             :toneMapped="false"
+            :opacity="0.9"
+            :transparent="true"
             emissive="#d2f1dd"
             color="#fefefe"
         />
     </TresMesh>
+    
+    <TresMesh
+        ref="shadedRef"
+        :position="[0, 3, 0]"
+    >
+        <TresBoxGeometry
+            :args="[5, 5, 5, 32, 32, 32]"
+        />
+        <TestShaderMaterial
+            :speed="testShaderState.speed"
+            :scale="testShaderState.scale"
+            :frequency="testShaderState.frequency"
+            :color="testShaderState.color"
+            :texture="testShaderState.texture"
+        />
+    </TresMesh>
+    
     
     <TresMesh
         ref="backWallRef"
