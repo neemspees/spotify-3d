@@ -61,7 +61,7 @@ watch(() => playerState.value.track, () => {
     <main>
         <div>
             <TresCanvas
-                clear-color="#000000"
+                clearColor="#201919"
             >
                 <Scene 
                     :title="songTitle"
@@ -119,6 +119,11 @@ main {
 
 main > * {
     flex: 1;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
 }
 
 main > div:nth-child(1) {

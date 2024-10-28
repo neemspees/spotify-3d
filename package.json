@@ -12,6 +12,7 @@
     "@spotify/web-api-ts-sdk": "^1.2.0",
     "@tresjs/cientos": "^4.0.3",
     "@tresjs/core": "^4.3.0",
+    "@tresjs/post-processing": "^0.7.1",
     "@types/spotify-web-playback-sdk": "^0.1.19",
     "fast-average-color": "^9.4.0",
     "three": "^0.169.0",

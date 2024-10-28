@@ -53,7 +53,7 @@ onBeforeRender(({ elapsed }) => {
 </script>
 
 <template> 
-    <TresRawShaderMaterial
+    <TresShaderMaterial
         ref="materialRef"
         :fragment-shader="fragmentShader"
         :vertex-shader="vertexShader"
